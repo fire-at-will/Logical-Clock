@@ -93,13 +93,18 @@ void manager(){
           messageDestination = atoi(tokens.at(j).c_str());
         } else if(j == 3){
           message = tokens.at(j);
-
-          // Get rid of "s at front and end o string
-          message = message.substr(1, message.length() - 2);
+        } else {
+          message += " ";
+          message += string(tokens.at(j));
         }
-
         j++;
       }
+
+      // Get rid of "s at front and end o string
+      if(commandType == 1){
+        message = message.substr(1, message.length() - 2);
+      }
+
 
       if(commandType == 0){
         // We need to send an exec
@@ -155,14 +160,16 @@ void worker(){
         logicalClock = clockVal;
       }
 
-      printf("\t[%d]: Message Received from %d: Message>%s<: Logical Clock = %d\n", rank, status.MPI_SOURCE, buf, logicalClock);
+      message.resize(message.size() - 2);
+
+      printf("\t[%d]: Message Received from %d: Message>%s<: Logical Clock = %d\n", rank, status.MPI_SOURCE, message.c_str(), logicalClock);
     } else {
       // Need to send a message to another process
       logicalClock++;
 
-      //ostringstream s;
-      //s << ":" << logicalClock;
-      //message.append(s.str());
+      ostringstream s;
+      s << ":" << logicalClock;
+      message.append(s.str());
 
       int destination = status.MPI_TAG - 3;
       MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, 2, MPI_COMM_WORLD);
