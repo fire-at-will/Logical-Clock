@@ -48,19 +48,22 @@ void manager(){
   // Loop to get and handle user input
   while(true){
     string command;
+    int recv;
 
     // Get command from user
     getline(std::cin, command);
 
+
     // Test for "end"
     if(command.compare("end") == 0){
       // Exit program
-
       // Tell other processes to quit
       for(int i = 1; i < size; i++){
         MPI_Send("Q", 1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
       }
-      printf("\t[%d]: Logical Clock = %d\n", rank, logicalClock);
+      // Wait for other processes to finish
+      printf("[%d]: Simulation ending\n", rank);
+      MPI_Barrier(MPI_COMM_WORLD);
 
       return;
     } else {
@@ -105,7 +108,6 @@ void manager(){
         message = message.substr(1, message.length() - 2);
       }
 
-
       if(commandType == 0){
         // We need to send an exec
         MPI_Send("EXEC", 4, MPI_CHAR, destination, 1, MPI_COMM_WORLD);
@@ -118,6 +120,9 @@ void manager(){
       }
 
     }
+
+    // Wait till command is done executing to execute next command
+    MPI_Recv(&recv, sizeof(int), MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
   }
 }
 
@@ -138,16 +143,20 @@ void worker(){
     MPI_Recv(&buf, count, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     string message = buf;
+    int done = 0;
 
     // See what message type is
     if(status.MPI_TAG == 0){
       // Quit
-      printf("\t[%d]: Simulation ending\n", rank);
+      /// Wait for other processes to finish
+      MPI_Barrier(MPI_COMM_WORLD);
+      printf("\t[%d]: Logical Clock = %d\n", rank, logicalClock);
       return;
     } else if(status.MPI_TAG == 1){
       // Exec command
       logicalClock++;
       printf("\t[%d]: Execution Event: Logical Clock = %d\n", rank, logicalClock);
+      MPI_Send(&done, sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD);
     } else if(status.MPI_TAG == 2){
       // Receiving a message
       logicalClock++;
@@ -159,10 +168,9 @@ void worker(){
       if(clockVal > logicalClock){
         logicalClock = clockVal;
       }
-
       message.resize(message.size() - 2);
-
       printf("\t[%d]: Message Received from %d: Message>%s<: Logical Clock = %d\n", rank, status.MPI_SOURCE, message.c_str(), logicalClock);
+      MPI_Send(&done, sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD);
     } else {
       // Need to send a message to another process
       logicalClock++;
