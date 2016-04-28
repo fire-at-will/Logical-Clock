@@ -152,7 +152,7 @@ void worker(){
       // Receiving a message
       logicalClock++;
 
-      int firstIndex = message.find(":");
+      int firstIndex = message.find(":") + 1;
       string clockValString = message.substr(firstIndex);
       int clockVal = atoi(clockValString.c_str());
 
