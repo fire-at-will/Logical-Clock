@@ -60,7 +60,7 @@ void manager(){
       for(int i = 1; i < size; i++){
         MPI_Send("Q", 1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
       }
-      printf("\t[%d]: Quitting...\n", rank);
+      printf("\t[%d]: Logical Clock = %d\n", rank, logicalClock);
 
       return;
     } else {
@@ -142,7 +142,7 @@ void worker(){
     // See what message type is
     if(status.MPI_TAG == 0){
       // Quit
-      printf("\t[%d]: Quitting...\n", rank);
+      printf("\t[%d]: Simulation ending\n", rank);
       return;
     } else if(status.MPI_TAG == 1){
       // Exec command
