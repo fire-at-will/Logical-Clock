@@ -1,3 +1,13 @@
+//********************************************************************
+//
+// Will Taylor & James Stewart
+// Operating Systems
+// Project 5: Lamport and Vector Logical Clocks
+// Due: April 29, 2016
+// Instructor: Dr. Michael C. Scherger
+//
+//********************************************************************
+
 #include <mpi.h>
 #include <stdio.h>
 #include <string>
@@ -16,7 +26,7 @@ void worker();
 
 int main (int argc, char *argv[]){
   int rank, size;
-
+  
   // Init MPI
   MPI_Init (&argc, &argv);	/* starts MPI */
   // Get rank and size of simulation
@@ -46,7 +56,7 @@ void manager(){
 
   // Print out the number of processes in simulation
   printf ("[0]: There are %d processes in the system\n", size);
-
+  
   // Loop to get and handle user input
   while(true){
     string command;
@@ -65,6 +75,7 @@ void manager(){
       }
       // Wait for other processes to finish
       printf("[%d]: Simulation ending\n", rank);
+      
       MPI_Barrier(MPI_COMM_WORLD);
 
       return;
@@ -144,11 +155,9 @@ void worker(){
   while(!done){
     char buf[128] = "";
     MPI_Status status;
-    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     int count;
-    MPI_Get_count(&status, MPI_CHAR, &count);
 
-    MPI_Recv(&buf, count, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&buf, 128, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     string message = buf;
     int done = 0;
@@ -156,23 +165,28 @@ void worker(){
     // See what message type is
     if(status.MPI_TAG == 0){
       // Quit
-      /// Wait for other processes to finish
+      // Wait for other processes to finish
       MPI_Barrier(MPI_COMM_WORLD);
-
-      printf("\t[%d]: Vector Clock = [%d,", rank, int(vectorClock[0]));
+      
+      ostringstream s;
+      
+      s << "\t[" << rank << "]: Vector Clock = [" << int(vectorClock[0]) << ", ";
+      
       for (int jj = 1; jj < size-1; jj++) {
         if (jj == size-2) {
-          printf(" %d]\n", vectorClock[jj]);
+          s << " " << vectorClock[jj] << "]\n";
         } else {
-          printf(" %d,", vectorClock[jj]);
+          s << " " << vectorClock[jj] << ", ";
         }
       }
-
+      
+      cout << s.str();
+      
       return;
     } else if(status.MPI_TAG == 1){
       // Exec command
       vectorClock[rank-1]++;
-
+      
       printf("\t[%d]: Execution Event: Vector Clock = [%d,", rank, int(vectorClock[0]));
       for (int jj = 1; jj < size-1; jj++) {
         if (jj == size-2) {
@@ -181,62 +195,75 @@ void worker(){
           printf(" %d,", vectorClock[jj]);
         }
       }
-
-
+      
       MPI_Send(&done, sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD);
     } else if(status.MPI_TAG == 2){
       // Receiving a message
       vectorClock[rank-1]++;
-
+      
       MPI_Status stat;
       int senderRank = stat.MPI_SOURCE;
-
-      for (int jj = 0; jj < senderRank; jj++) {
-        int firstIndex = message.find(":") + 1;
+      
+      int colonIndex = message.find(":") - 1;
+      
+      for (int jj = 0; jj < size - 1; jj++) {
+        colonIndex = colonIndex + 2;
         string clockValString;
-        if (isdigit(message.at(firstIndex+1))) {
-          clockValString = message.substr(firstIndex, firstIndex+1);
+        if (isdigit(message.at(colonIndex+1))) {
+          clockValString = message.substr(colonIndex, colonIndex+1);
         } else {
-            clockValString = &message.at(firstIndex);
+            clockValString = &message.at(colonIndex);
         }
         int clockVal = atoi(clockValString.c_str());
-      }
-
-      if(vectorClock[senderRank] > vectorClock[rank]){
-        vectorClock[rank] = vectorClock[senderRank];
-      }
-      message.resize(message.size() - 2);
-      printf("\t[%d]: Message Received from %d: Message>%s<: Vector Clock = [%d,", rank, status.MPI_SOURCE, message.c_str(), vectorClock[0]);
-      for (int jj = 1; jj < size-1; jj++) {
-        if (jj == size-2) {
-          printf(" %d]\n", vectorClock[jj]);
-        } else {
-          printf(" %d,", vectorClock[jj]);
+        
+        if(clockVal > vectorClock[jj]){
+          vectorClock[jj] = clockVal;
         }
       }
-
+ 
+      message.resize(message.size() - ((size - 1) * 2));
+      
+      ostringstream s;
+      s << "\t[" << rank << "]: Message Received from " << status.MPI_SOURCE << ": Message>" << message << "<: Vector clock = [" << vectorClock[0] << ",";
+      for (int jj = 1; jj < size-1; jj++) {
+        if (jj == size-2) {
+          s << " " << vectorClock[jj] << "]\n";
+        } else {
+         s << " " << vectorClock[jj] << ",";
+        }
+      }
+      cout << s.str();
+      
       MPI_Send(&done, sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD);
     } else {
       // Need to send a message to another process
       vectorClock[rank-1]++;
-
+      
       ostringstream s;
-      for (int jj = 0; jj < size-2; jj++) {
+      for (int jj = 0; jj < size-1; jj++) {
         s << ":" << vectorClock[jj];
-        message.append(s.str());
+        
       }
+      s << ":";
+      message.append(s.str());
 
       int destination = status.MPI_TAG - 3;
       MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, 2, MPI_COMM_WORLD);
-
-      printf("\t[%d]: Message Sent to %d: Message >%s<: Vector Clock = [%d,", rank, status.MPI_TAG - 3, buf, vectorClock[0]);
+      
+      // Clear out outputstream
+      s.str("");
+      s.clear();
+      
+      s << "\t[" << rank << "]: Message Sent to: " << status.MPI_TAG - 3 << ": Message>" << string(buf) << "< Vector Clock = [" << vectorClock[0] << ",";
+      
       for (int jj = 1; jj < size-1; jj++) {
         if (jj == size-2) {
-          printf(" %d]\n", vectorClock[jj]);
+          s << " " << vectorClock[jj] << "]\n";
         } else {
-          printf(" %d,", vectorClock[jj]);
+          s << " " << vectorClock[jj] << ",";
         }
       }
+      cout << s.str();
     }
   }
 
