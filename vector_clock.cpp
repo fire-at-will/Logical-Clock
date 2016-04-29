@@ -83,7 +83,6 @@ void manager(){
       int commandType = 0;
       j = 0;
       for(vector<string>::iterator i = tokens.begin(); i != tokens.end(); i++){
-        //cout << *i << "\n";
         if(j == 0){
           if(tokens.at(j).compare("exec") == 0){
             // Exec command
