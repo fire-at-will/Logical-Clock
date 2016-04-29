@@ -1,3 +1,13 @@
+//********************************************************************
+//
+// Will Taylor & James Stewart
+// Operating Systems
+// Project 5: Lamport and Vector Logical Clocks
+// Due: April 29, 2016
+// Instructor: Dr. Michael C. Scherger
+//
+//********************************************************************
+
 #include <mpi.h>
 #include <stdio.h>
 #include <string>
@@ -36,7 +46,8 @@ int main (int argc, char *argv[]){
 
 void manager(){
   int rank, size;
-  int logicalClock = 0;
+  int logicalClock;
+  bool continueOn = false;
 
   // Get rank and size of simulation
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);	/* get current process id */
@@ -77,6 +88,8 @@ void manager(){
           tokens.push_back(buf);
       }
 
+      // ---- Parse the command from user -----
+
       // Command Type 0 = Exec
       // Command Type 1 = Message
       int destination, j, messageDestination;
@@ -84,7 +97,6 @@ void manager(){
       int commandType = 0;
       j = 0;
       for(vector<string>::iterator i = tokens.begin(); i != tokens.end(); i++){
-        //cout << *i << "\n";
         if(j == 0){
           if(tokens.at(j).compare("exec") == 0){
             // Exec command
@@ -93,12 +105,25 @@ void manager(){
             commandType = 1;
           }
         } else if(j == 1){
+
+          // Get the process that will execute command
           destination = atoi(tokens.at(j).c_str());
+          if(destination == 0){
+            // Manager cannot directly execute commands
+            printf("ERROR: Manager cannot perform instructions. Assigning to process 1.\n");
+            destination = 1;
+          }
+
         } else if(j == 2){
+
+          // If a message is being sent, this is the process that will receive the message
           messageDestination = atoi(tokens.at(j).c_str());
+
         } else if(j == 3){
+          // First part of the message
           message = tokens.at(j);
         } else {
+          // More parts of the message
           message += " ";
           message += string(tokens.at(j));
         }
@@ -112,13 +137,13 @@ void manager(){
 
       if(commandType == 0){
         // We need to send an exec
-        MPI_Send("EXEC", 4, MPI_CHAR, destination, 1, MPI_COMM_WORLD);
+        MPI_Send("EXEC", 128, MPI_CHAR, destination, 1, MPI_COMM_WORLD);
       } else if(commandType == 1){
         // We need to send a message
         // We want to pass the destination in the tag, but ensure that
         // no tag collisions occur.
         int tag = messageDestination + 3;
-        MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, tag, MPI_COMM_WORLD);
+        MPI_Send(message.c_str(), 128, MPI_CHAR, destination, tag, MPI_COMM_WORLD);
       }
 
     }
@@ -133,18 +158,13 @@ void worker(){
   bool done = false;
   int logicalClock = 0;
 
-  printf("There are %d many processes\n", size);
-
-  MPI_Comm_rank (MPI_COMM_WORLD, &rank);	/* get current process id */
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);	/* get current process id */
 
   while(!done){
     char buf[128] = "";
     MPI_Status status;
-    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    int count;
-    MPI_Get_count(&status, MPI_CHAR, &count);
 
-    MPI_Recv(&buf, count, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&buf, 128, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     string message = buf;
     int done = 0;
@@ -152,7 +172,7 @@ void worker(){
     // See what message type is
     if(status.MPI_TAG == 0){
       // Quit
-      /// Wait for other processes to finish
+      // Wait for other processes to finish
       MPI_Barrier(MPI_COMM_WORLD);
       printf("\t[%d]: Logical Clock = %d\n", rank, logicalClock);
       return;
@@ -189,5 +209,4 @@ void worker(){
       printf("\t[%d]: Message Sent to %d: Message >%s<: Logical Clock = %d\n", rank, status.MPI_TAG - 3, buf, logicalClock);
     }
   }
-
 }
