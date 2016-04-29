@@ -5,6 +5,8 @@
 #include <sstream>
 #include <vector>
 #include <stdlib.h>
+#include <cstring>
+#include <sstream>
 
 using namespace std;
 
@@ -46,13 +48,23 @@ void manager(){
   // Loop to get and handle user input
   while(true){
     string command;
+    int recv;
 
     // Get command from user
     getline(std::cin, command);
 
+
     // Test for "end"
     if(command.compare("end") == 0){
       // Exit program
+      // Tell other processes to quit
+      for(int i = 1; i < size; i++){
+        MPI_Send("Q", 1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
+      }
+      // Wait for other processes to finish
+      printf("[%d]: Simulation ending\n", rank);
+      MPI_Barrier(MPI_COMM_WORLD);
+
       return;
     } else {
       // Parse command
@@ -84,102 +96,93 @@ void manager(){
           messageDestination = atoi(tokens.at(j).c_str());
         } else if(j == 3){
           message = tokens.at(j);
-
-          // Get rid of "s at front and end o string
-          message = message.substr(1, message.length() - 1);
+        } else {
+          message += " ";
+          message += string(tokens.at(j));
         }
-
         j++;
       }
 
-      cout << "got tokens.\n";
-
-      // Get destination to do command
-      cout << "About to send...\n";
-      MPI_Send(&commandType, 1, MPI_INT, destination, 0, MPI_COMM_WORLD);
-      cout << "Sent\n";
-
+      // Get rid of "s at front and end o string
       if(commandType == 1){
-        // Message command
+        message = message.substr(1, message.length() - 2);
+      }
 
-        // Tell messageDestination to listen for message from destination
-        commandType = 2;
-        MPI_Send(&commandType, 1, MPI_INT, messageDestination, 0, MPI_COMM_WORLD);
-
-        // Tell destination what the messageDestination is
-        cout << "Message dest: " << messageDestination << "\n";
-        MPI_Send(&messageDestination, 1, MPI_INT, destination, 0, MPI_COMM_WORLD);
-
-        // Send message to destination
-        MPI_Send(message.c_str(), message.size() + 1, MPI_CHAR, destination, 0, MPI_COMM_WORLD);
-        cout << "Sent message to destination\n";
+      if(commandType == 0){
+        // We need to send an exec
+        MPI_Send("EXEC", 128, MPI_CHAR, destination, 1, MPI_COMM_WORLD);
+      } else if(commandType == 1){
+        // We need to send a message
+        // We want to pass the destination in the tag, but ensure that
+        // no tag collisions occur.
+        int tag = messageDestination + 3;
+        MPI_Send(message.c_str(), 128, MPI_CHAR, destination, tag, MPI_COMM_WORLD);
       }
 
     }
 
+    // Wait till command is done executing to execute next command
+    MPI_Recv(&recv, sizeof(int), MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
   }
 }
 
 void worker(){
-  int rank, size;
-  int logicalClock;
-  int command;
+  int rank;
+  bool done = false;
+  int logicalClock = 0;
 
-  logicalClock = 0;
-
-  // Get rank and size of simulation
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);	/* get current process id */
-  MPI_Comm_size (MPI_COMM_WORLD, &size);	/* get number of processes */
 
-  while(true){
-    MPI_Recv(&command, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    printf("\t[%d]: Received command code %d\n", rank, command);
-    if(command == 0){
-      // We have an exec command
+  while(!done){
+    char buf[128] = "";
+    MPI_Status status;
+    int count;
+    //MPI_Get_count(&status, MPI_CHAR, &count);
+
+    MPI_Recv(&buf, 128, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+    string message = buf;
+    int done = 0;
+
+    // See what message type is
+    if(status.MPI_TAG == 0){
+      // Quit
+      /// Wait for other processes to finish
+      MPI_Barrier(MPI_COMM_WORLD);
+      printf("\t[%d]: Logical Clock = %d\n", rank, logicalClock);
+      return;
+    } else if(status.MPI_TAG == 1){
+      // Exec command
       logicalClock++;
       printf("\t[%d]: Execution Event: Logical Clock = %d\n", rank, logicalClock);
-    } else if(command == 1){
-      // We need to send a message
+      MPI_Send(&done, sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD);
+    } else if(status.MPI_TAG == 2){
+      // Receiving a message
+      logicalClock++;
 
+      int firstIndex = message.find(":") + 1;
+      string clockValString = message.substr(firstIndex);
+      int clockVal = atoi(clockValString.c_str());
 
-      // Get message destination ID from manager
-      int messageDestination;
+      if(clockVal > logicalClock){
+        logicalClock = clockVal;
+      }
+      message.resize(message.size() - 2);
+      printf("\t[%d]: Message Received from %d: Message>%s<: Logical Clock = %d\n", rank, status.MPI_SOURCE, message.c_str(), logicalClock);
+      MPI_Send(&done, sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD);
+    } else {
+      // Need to send a message to another process
+      logicalClock++;
 
-      MPI_Recv(&messageDestination, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      printf("\t[%d]: Received message destination: %d\n", rank, messageDestination);
+      ostringstream s;
+      s << ":" << logicalClock;
+      message.append(s.str());
 
-      char *buf = new char[128];
-      printf("\t[%d]: Listening to receive a message that we then need to send...\n", rank);
-      MPI_Recv(&buf, 128, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      printf("\t[%d]: Received message from manager!\n", rank);
+      int destination = status.MPI_TAG - 3;
+      MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, 2, MPI_COMM_WORLD);
 
-
-      // TODO: PROBLEM IS HERE
-      string test = string(buf);
-      cout << "Test: " << test << "\n";
-
-
-      MPI_Send(&buf, 128, MPI_CHAR, messageDestination, 0, MPI_COMM_WORLD);
-      printf("\t[%d]: Sent message to process %d\n", rank, messageDestination);
-      //cout << "\t[" << rank << "]: I just got a command to send " << message << " to " << messageDestination << ".\n";
-
-      // // Get the message itself from manager
-      // char *buf = new char[128];
-      // MPI_Recv(&message, 128, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-
-
-      //printf("\t[%d]: I just got a command to send %s to %d.\n", rank, message, messageDestination);
-
-      delete [] buf;
-    } else if(command == 2){
-      // We need to listen for a message and a clock value
-      string message;
-      char *buf = new char[128];
-      printf("\t[%d]: Listening to receive a message...\n", rank);
-      MPI_Recv(&buf, 128, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      printf("\t[%d]: Received message!\n", rank);
-
+      printf("\t[%d]: Message Sent to %d: Message >%s<: Logical Clock = %d\n", rank, status.MPI_TAG - 3, buf, logicalClock);
     }
   }
+
 }
