@@ -110,13 +110,13 @@ void manager(){
 
       if(commandType == 0){
         // We need to send an exec
-        MPI_Send("EXEC", 4, MPI_CHAR, destination, 1, MPI_COMM_WORLD);
+        MPI_Send("EXEC", 128, MPI_CHAR, destination, 1, MPI_COMM_WORLD);
       } else if(commandType == 1){
         // We need to send a message
         // We want to pass the destination in the tag, but ensure that
         // no tag collisions occur.
         int tag = messageDestination + 3;
-        MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, tag, MPI_COMM_WORLD);
+        MPI_Send(message.c_str(), 128, MPI_CHAR, destination, tag, MPI_COMM_WORLD);
       }
 
     }
@@ -136,11 +136,10 @@ void worker(){
   while(!done){
     char buf[128] = "";
     MPI_Status status;
-    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     int count;
-    MPI_Get_count(&status, MPI_CHAR, &count);
+    //MPI_Get_count(&status, MPI_CHAR, &count);
 
-    MPI_Recv(&buf, count, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&buf, 128, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     string message = buf;
     int done = 0;
