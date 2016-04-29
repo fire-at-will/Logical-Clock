@@ -1,3 +1,13 @@
+//********************************************************************
+//
+// Will Taylor & James Stewart
+// Operating Systems
+// Project 5: Lamport and Vector Logical Clocks
+// Due: April 29, 2016
+// Instructor: Dr. Michael C. Scherger
+//
+//********************************************************************
+
 #include <mpi.h>
 #include <stdio.h>
 #include <string>
@@ -5,7 +15,7 @@
 #include <sstream>
 #include <vector>
 #include <stdlib.h>
-#include <cstring>
+#include <cstring> 
 #include <sstream>
 
 using namespace std;
@@ -37,6 +47,7 @@ int main (int argc, char *argv[]){
 void manager(){
   int rank, size;
   int logicalClock;
+  bool continueOn = false;
 
   // Get rank and size of simulation
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);	/* get current process id */
@@ -92,6 +103,10 @@ void manager(){
           }
         } else if(j == 1){
           destination = atoi(tokens.at(j).c_str());
+          if(destination == 0){
+            printf("ERROR: Manager cannot perform instructions. Assigning to process 1.\n");
+            destination = 1;
+          }
         } else if(j == 2){
           messageDestination = atoi(tokens.at(j).c_str());
         } else if(j == 3){
@@ -102,7 +117,7 @@ void manager(){
         }
         j++;
       }
-
+      
       // Get rid of "s at front and end o string
       if(commandType == 1){
         message = message.substr(1, message.length() - 2);

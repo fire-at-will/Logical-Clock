@@ -93,6 +93,10 @@ void manager(){
           }
         } else if(j == 1){
           destination = atoi(tokens.at(j).c_str());
+          if(destination == 0){
+            printf("ERROR: Manager cannot perform instructions. Assigning to process 1.\n");
+            destination = 1;
+          }
         } else if(j == 2){
           messageDestination = atoi(tokens.at(j).c_str());
         } else if(j == 3){
