@@ -36,11 +36,13 @@ int main (int argc, char *argv[]){
 
 void manager(){
   int rank, size;
-  int logicalClock;
+  int logicalClock = 0;
 
   // Get rank and size of simulation
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);	/* get current process id */
   MPI_Comm_size (MPI_COMM_WORLD, &size);	/* get number of processes */
+
+  int vectorClock[size-1] = {};
 
   // Print out the number of processes in simulation
   printf ("[0]: There are %d processes in the system\n", size);
@@ -130,6 +132,8 @@ void worker(){
   int rank;
   bool done = false;
   int logicalClock = 0;
+
+  printf("There are %d many processes\n", size);
 
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);	/* get current process id */
 
