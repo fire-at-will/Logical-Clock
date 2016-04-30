@@ -278,9 +278,10 @@ void worker(){
       message.append(s.str());
 
       int destination = status.MPI_TAG - 3;
-      MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, 2, MPI_COMM_WORLD);
-
+     
       printf("\t[%d]: Message Sent to %d: Message >%s<: Logical Clock = %d\n", rank, status.MPI_TAG - 3, buf, logicalClock);
+      
+      MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, 2, MPI_COMM_WORLD);
     }
   }
 }

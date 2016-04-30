@@ -320,13 +320,13 @@ void worker(){
       message.append(s.str());
 
       int destination = status.MPI_TAG - 3;
-      MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, 2, MPI_COMM_WORLD);
+      
 
       // Clear out outputstream
       s.str("");
       s.clear();
 
-      s << "\t[" << rank << "]: Message Sent to: " << status.MPI_TAG - 3 << ": Message>" << string(buf) << "< Vector Clock = [" << vectorClock[0] << ",";
+      s << "\t[" << rank << "]: Message Sent to: " << status.MPI_TAG - 3 << ": Message>" << string(buf) << "<: Vector Clock = [" << vectorClock[0] << ",";
 
       for (int jj = 1; jj < size-1; jj++) {
         if (jj == size-2) {
@@ -336,6 +336,8 @@ void worker(){
         }
       }
       cout << s.str();
+      
+      MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, 2, MPI_COMM_WORLD);
     }
   }
 
