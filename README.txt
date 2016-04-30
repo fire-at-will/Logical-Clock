@@ -19,9 +19,9 @@ Usage:
         - exec [PROCESS_NUMBER] This command instructs a process to perform a command and
             increment its own clock.
             
-        - send [SENDING_PROCESSES] [RECEIVING_PROCESS] ["MESSAGE"] This command instructs the sending process to
-            send MESSAGE to the receiving process. Note that you do need to include the quotation marks, but they will
-            not be shown in the output.
+        - send [SENDING_PROCESSES] [RECEIVING_PROCESS] ["MESSAGE"] This command instructs 
+            the sending process to send MESSAGE to the receiving process. Note that you do need
+            to include the quotation marks, but they will not be shown in the output.
         - end   This command cleanly terminates all processes and ends the simulation.   
             
 Estimated time spent: about 6-8 hours each.
