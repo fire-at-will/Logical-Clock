@@ -296,7 +296,7 @@ void worker(){
       message.resize(message.size() - ((size - 1) * 2) - 1);
 
       ostringstream s;
-      s << "\t[" << rank << "]: Message Received from " << status.MPI_SOURCE << ": Message>" << message << "< Vector clock = [" << vectorClock[0] << ",";
+      s << "\t[" << rank << "]: Message Received from " << status.MPI_SOURCE << ": Message>" << message << "<: Vector clock = [" << vectorClock[0] << ",";
       for (int jj = 1; jj < size-1; jj++) {
         if (jj == size-2) {
           s << " " << vectorClock[jj] << "]\n";
