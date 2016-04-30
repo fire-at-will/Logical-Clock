@@ -24,6 +24,19 @@ using namespace std;
 void manager();
 void worker();
 
+//********************************************************************
+//
+//                             main()
+//
+//  This function bootstraps the simulation. It initializes MPI and then
+//  assigns processes to be the manager or a worker based on their MPI
+//  rank. Once the processes are done working, they return here and
+//  execute MPI_Finalize() and then return to their calling environment.
+//
+//  Input:    N/A (Number of processes in argv is handled by MPI)
+//  Output:   N/A
+//
+//********************************************************************
 int main (int argc, char *argv[]){
   int rank, size;
   
@@ -45,6 +58,35 @@ int main (int argc, char *argv[]){
   return 0;
 }
 
+//********************************************************************
+//
+//                             manager()
+//
+//  This function contains the instructions for the manager thread.
+//  The manager listens for user input from stdin in an infinite loop.
+//  Input is parsed and handled appropriately.
+//
+//  We use tags to encode various metadata attributes about messages and
+//  instructions as we pass them from process to process. Here is our 
+//  standard for tags:
+//      0     - Quit command
+//      1     - Exec command
+//      2     - Worker receiving a message from another worker process
+//      >= 3  - Send message command. The receiving process's rank is 
+//              encoded and can be decoded from the tag by subtracting
+//              3 from the tag's value.
+//
+//  After sending an instruction to a worker, the manager must wait
+//  until it receives an "acknowledgement" message from the worker that
+//  completes the instruction. This is done so that the order of instructions
+//  given by the user is preserved.
+//
+//  Input:    - User commands (via stdin)
+//            - Acknowledgment Messages (via MPI_Recv)
+//     
+//  Output:   - Instructions (via MPI_Send)
+//
+//********************************************************************
 void manager(){
   int rank, size;
 
@@ -142,6 +184,36 @@ void manager(){
   }
 }
 
+//********************************************************************
+//
+//                             worker()
+//
+//  This function contains the instructions for the worker threads.
+//  The manager listens for instruction from the manager or messages
+//  from other worker processes. Once an instruction/message is 
+//  received, it is handled appropriately.
+//
+//  We use tags to encode various metadata attributes about messages and
+//  instructions as we pass them from process to process. Here is our 
+//  standard for tags:
+//      0     - Quit command
+//      1     - Exec command
+//      2     - Worker receiving a message from another worker process
+//      >= 3  - Send message command. The receiving process's rank is 
+//              encoded and can be decoded from the tag by subtracting
+//              3 from the tag's value.
+//
+//  After completing an instruction, the work must send an "acknowledgement"
+//  message to the manager, meaning that the instruction has been completed.
+//  This is done so that the order of instructions given by the user is
+//  preserved.
+//
+//  Input:    - Instructions (via MPI_Recv)
+//            - Messages (via MPI_Recv)
+//  Output:   - Messages (via MPI_Send)
+//            - Acknowledgment Messages (via MPI_Send)
+//
+//********************************************************************
 void worker(){
   int rank, size;
   bool done = false;
