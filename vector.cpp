@@ -67,12 +67,12 @@ int main (int argc, char *argv[]){
 //  Input is parsed and handled appropriately.
 //
 //  We use tags to encode various metadata attributes about messages and
-//  instructions as we pass them from process to process. Here is our 
+//  instructions as we pass them from process to process. Here is our
 //  standard for tags:
 //      0     - Quit command
 //      1     - Exec command
 //      2     - Worker receiving a message from another worker process
-//      >= 3  - Send message command. The receiving process's rank is 
+//      >= 3  - Send message command. The receiving process's rank is
 //              encoded and can be decoded from the tag by subtracting
 //              3 from the tag's value.
 //
@@ -83,7 +83,7 @@ int main (int argc, char *argv[]){
 //
 //  Input:    - User commands (via stdin)
 //            - Acknowledgment Messages (via MPI_Recv)
-//     
+//
 //  Output:   - Instructions (via MPI_Send)
 //
 //********************************************************************
@@ -190,16 +190,16 @@ void manager(){
 //
 //  This function contains the instructions for the worker threads.
 //  The manager listens for instruction from the manager or messages
-//  from other worker processes. Once an instruction/message is 
+//  from other worker processes. Once an instruction/message is
 //  received, it is handled appropriately.
 //
 //  We use tags to encode various metadata attributes about messages and
-//  instructions as we pass them from process to process. Here is our 
+//  instructions as we pass them from process to process. Here is our
 //  standard for tags:
 //      0     - Quit command
 //      1     - Exec command
 //      2     - Worker receiving a message from another worker process
-//      >= 3  - Send message command. The receiving process's rank is 
+//      >= 3  - Send message command. The receiving process's rank is
 //              encoded and can be decoded from the tag by subtracting
 //              3 from the tag's value.
 //
@@ -296,7 +296,7 @@ void worker(){
       message.resize(message.size() - ((size - 1) * 2) - 1);
 
       ostringstream s;
-      s << "\t[" << rank << "]: Message Received from " << status.MPI_SOURCE << ": Message>" << message << "<: Vector clock = [" << vectorClock[0] << ",";
+      s << "\t[" << rank << "]: Message Received from " << status.MPI_SOURCE << ": Message>" << message << "< Vector clock = [" << vectorClock[0] << ",";
       for (int jj = 1; jj < size-1; jj++) {
         if (jj == size-2) {
           s << " " << vectorClock[jj] << "]\n";
@@ -320,7 +320,7 @@ void worker(){
       message.append(s.str());
 
       int destination = status.MPI_TAG - 3;
-      
+
 
       // Clear out outputstream
       s.str("");
@@ -336,7 +336,7 @@ void worker(){
         }
       }
       cout << s.str();
-      
+
       MPI_Send(message.c_str(), message.size(), MPI_CHAR, destination, 2, MPI_COMM_WORLD);
     }
   }
