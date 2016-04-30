@@ -25,4 +25,4 @@ vector.o: vector.cpp
 	 $(MPI) -c vector.cpp
 
 clean:
-	$(RM) $(RMOPTS) *.o *~ core lamport
+	$(RM) $(RMOPTS) *.o *~ core lamport vector
