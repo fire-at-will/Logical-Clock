@@ -58,8 +58,6 @@ int main (int argc, char *argv[]){
   return 0;
 }
 
-}
-
 //********************************************************************
 //
 //                             manager()
@@ -69,12 +67,12 @@ int main (int argc, char *argv[]){
 //  Input is parsed and handled appropriately.
 //
 //  We use tags to encode various metadata attributes about messages and
-//  instructions as we pass them from process to process. Here is our 
+//  instructions as we pass them from process to process. Here is our
 //  standard for tags:
 //      0     - Quit command
 //      1     - Exec command
 //      2     - Worker receiving a message from another worker process
-//      >= 3  - Send message command. The receiving process's rank is 
+//      >= 3  - Send message command. The receiving process's rank is
 //              encoded and can be decoded from the tag by subtracting
 //              3 from the tag's value.
 //
@@ -85,7 +83,7 @@ int main (int argc, char *argv[]){
 //
 //  Input:    - User commands (via stdin)
 //            - Acknowledgment Messages (via MPI_Recv)
-//     
+//
 //  Output:   - Instructions (via MPI_Send)
 //
 //********************************************************************
@@ -205,16 +203,16 @@ void manager(){
 //
 //  This function contains the instructions for the worker threads.
 //  The manager listens for instruction from the manager or messages
-//  from other worker processes. Once an instruction/message is 
+//  from other worker processes. Once an instruction/message is
 //  received, it is handled appropriately.
 //
 //  We use tags to encode various metadata attributes about messages and
-//  instructions as we pass them from process to process. Here is our 
+//  instructions as we pass them from process to process. Here is our
 //  standard for tags:
 //      0     - Quit command
 //      1     - Exec command
 //      2     - Worker receiving a message from another worker process
-//      >= 3  - Send message command. The receiving process's rank is 
+//      >= 3  - Send message command. The receiving process's rank is
 //              encoded and can be decoded from the tag by subtracting
 //              3 from the tag's value.
 //

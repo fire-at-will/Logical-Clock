@@ -10,6 +10,8 @@ MPI = mpic++
 RM = /bin/rm
 RMOPTS = -f
 
+all: lamport vector
+
 lamport: lamport.o
 	$(MPI) lamport.o -o lamport
 
