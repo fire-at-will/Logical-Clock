@@ -293,6 +293,8 @@ void worker(){
         }
       }
       
+      // comment
+      
       if(vectorClock[status.MPI_SOURCE - 1] > vectorClock[rank - 1]){
         vectorClock[rank - 1] = vectorClock[status.MPI_SOURCE - 1];
       }
