@@ -284,13 +284,17 @@ void worker(){
         if (isdigit(message.at(colonIndex+1))) {
           clockValString = message.substr(colonIndex, colonIndex+1);
         } else {
-            clockValString = &message.at(colonIndex);
+          clockValString = &message.at(colonIndex);
         }
         int clockVal = atoi(clockValString.c_str());
 
         if(clockVal > vectorClock[jj]){
           vectorClock[jj] = clockVal;
         }
+      }
+      
+      if(vectorClock[status.MPI_SOURCE - 1] > vectorClock[rank - 1]){
+        vectorClock[rank - 1] = vectorClock[status.MPI_SOURCE - 1];
       }
 
       message.resize(message.size() - ((size - 1) * 2) - 1);
